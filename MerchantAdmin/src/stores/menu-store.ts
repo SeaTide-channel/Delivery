@@ -7,7 +7,7 @@ import {
 import { type Category, type Dish, type DishStatus } from '@/features/menu/model/types'
 
 /** Bump when persisted shape changes to drop old sessionStorage payload */
-export const MENU_MOCK_SCHEMA_VERSION = 1
+export const MENU_MOCK_SCHEMA_VERSION = 2
 
 const STORAGE_KEY = `seatide-menu-mock-v${MENU_MOCK_SCHEMA_VERSION}`
 
@@ -69,6 +69,7 @@ export const useMenuStore = create<MenuStoreState>()(
           id: input.id ?? crypto.randomUUID(),
           categoryId: input.categoryId,
           name: input.name,
+          sortOrder: input.sortOrder,
           price: input.price,
           imageUrl: input.imageUrl,
           status: input.status,
@@ -110,4 +111,32 @@ export function selectSortedCategories(categories: Category[]): Category[] {
 
 export function categoryNameMap(categories: Category[]): Map<string, string> {
   return new Map(categories.map((c) => [c.id, c.name]))
+}
+
+/** 按分类排序 → 分类内菜品 sortOrder → id，用于列表与预览菜单顺序 */
+export function sortDishesForDisplay(
+  dishes: Dish[],
+  sortedCategories: Category[]
+): Dish[] {
+  const catRank = new Map(sortedCategories.map((c) => [c.id, c.sortOrder]))
+  return [...dishes].sort((a, b) => {
+    const ao = catRank.get(a.categoryId) ?? Number.MAX_SAFE_INTEGER
+    const bo = catRank.get(b.categoryId) ?? Number.MAX_SAFE_INTEGER
+    if (ao !== bo) return ao - bo
+    const d = a.sortOrder - b.sortOrder
+    if (d !== 0) return d
+    return a.id.localeCompare(b.id)
+  })
+}
+
+/** 新增菜品时默认排序：该分类现有最大 sortOrder + 10；无菜品时从 10 开始 */
+export function nextDishSortOrder(
+  dishes: Dish[],
+  categoryId: string
+): number {
+  let max = 0
+  for (const d of dishes) {
+    if (d.categoryId === categoryId) max = Math.max(max, d.sortOrder)
+  }
+  return max === 0 ? 10 : max + 10
 }

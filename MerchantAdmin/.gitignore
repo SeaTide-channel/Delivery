@@ -35,3 +35,6 @@ dist-ssr
 # IDE
 .vscode
 .cursor
+
+# document
+docs

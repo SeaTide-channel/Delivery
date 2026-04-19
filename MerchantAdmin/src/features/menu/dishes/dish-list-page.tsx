@@ -73,12 +73,15 @@ import {
 } from '@/features/menu/model/types'
 import {
   categoryNameMap,
+  nextDishSortOrder,
   selectSortedCategories,
+  sortDishesForDisplay,
   useMenuStore,
 } from '@/stores/menu-store'
 
 const dishFormSchema = z.object({
   name: z.string().min(1, '请输入菜品名称').max(64),
+  sortOrder: z.coerce.number().int().min(0, '排序不能为负数'),
   price: z.coerce.number().positive('价格必须大于 0'),
   categoryId: z.string().min(1, '请选择分类'),
   imageUrl: z
@@ -123,11 +126,12 @@ export function DishListPage() {
   )
 
   const rows = React.useMemo<DishRow[]>(() => {
-    return dishes.map((d) => ({
+    const ordered = sortDishesForDisplay(dishes, sortedCategories)
+    return ordered.map((d) => ({
       ...d,
       categoryLabel: nameLookup.get(d.categoryId) ?? '—',
     }))
-  }, [dishes, nameLookup])
+  }, [dishes, nameLookup, sortedCategories])
 
   const [search, setSearch] = React.useState('')
   const [filterCategoryId, setFilterCategoryId] = React.useState<string>('all')
@@ -147,8 +151,13 @@ export function DishListPage() {
     if (filterStatus !== 'all') {
       list = list.filter((d) => d.status === filterStatus)
     }
-    return list
-  }, [rows, search, filterCategoryId, filterStatus])
+    const dishRows = list.map(({ categoryLabel: _, ...rest }) => rest)
+    const reordered = sortDishesForDisplay(dishRows, sortedCategories)
+    return reordered.map((d) => ({
+      ...d,
+      categoryLabel: nameLookup.get(d.categoryId) ?? '—',
+    }))
+  }, [rows, search, filterCategoryId, filterStatus, sortedCategories, nameLookup])
 
   const [sheetOpen, setSheetOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<Dish | null>(null)
@@ -163,6 +172,7 @@ export function DishListPage() {
     resolver: zodResolver(dishFormSchema) as Resolver<DishFormValues>,
     defaultValues: {
       name: '',
+      sortOrder: 10,
       price: 0,
       categoryId: '',
       imageUrl: 'https://picsum.photos/seed/custom/400/400',
@@ -177,10 +187,12 @@ export function DishListPage() {
       return
     }
     setEditing(null)
+    const firstCat = sortedCategories[0]?.id ?? ''
     form.reset({
       name: '',
+      sortOrder: nextDishSortOrder(dishes, firstCat),
       price: 18,
-      categoryId: sortedCategories[0]?.id ?? '',
+      categoryId: firstCat,
       imageUrl: 'https://picsum.photos/seed/custom/400/400',
       description: '',
       status: 'ON_SALE',
@@ -193,6 +205,7 @@ export function DishListPage() {
       id: row.id,
       categoryId: row.categoryId,
       name: row.name,
+      sortOrder: row.sortOrder,
       price: row.price,
       imageUrl: row.imageUrl,
       status: row.status,
@@ -201,6 +214,7 @@ export function DishListPage() {
     setEditing(dish)
     form.reset({
       name: dish.name,
+      sortOrder: dish.sortOrder,
       price: dish.price,
       categoryId: dish.categoryId,
       imageUrl: dish.imageUrl,
@@ -226,6 +240,7 @@ export function DishListPage() {
     try {
       const payload = {
         name: values.name,
+        sortOrder: values.sortOrder,
         price: values.price,
         categoryId: values.categoryId,
         imageUrl: values.imageUrl,
@@ -267,6 +282,15 @@ export function DishListPage() {
       {
         accessorKey: 'categoryLabel',
         header: '分类',
+      },
+      {
+        accessorKey: 'sortOrder',
+        header: '排序',
+        cell: ({ row }) => (
+          <span className='tabular-nums text-muted-foreground'>
+            {row.original.sortOrder}
+          </span>
+        ),
       },
       {
         accessorKey: 'price',
@@ -345,7 +369,7 @@ export function DishListPage() {
     <>
       <StandardListShell
         title='菜品列表'
-        description='管理店铺在售与估清菜品；列表内可快速切换在售状态。'
+        description='管理店铺在售与估清菜品；列表按分类顺序与本分类内排序展示（数字越小越靠前）。'
         actions={
           <>
             <Button type='button' variant='outline' onClick={() => resetToSeed()}>
@@ -474,7 +498,7 @@ export function DishListPage() {
           <SheetHeader className='border-b p-4'>
             <SheetTitle>{editing ? '编辑菜品' : '新增菜品'}</SheetTitle>
             <SheetDescription>
-              分类为必填；图片 URL 仅供演示，后续可接入上传并自动裁切展示。
+              分类为必填；排序仅在同一分类内生效。图片 URL 仅供演示，后续可接入上传并自动裁切展示。
             </SheetDescription>
           </SheetHeader>
           <Form {...form}>
@@ -490,7 +514,18 @@ export function DishListPage() {
                     <FormItem>
                       <FormLabel>分类</FormLabel>
                       <Select
-                        onValueChange={field.onChange}
+                        onValueChange={(v) => {
+                          field.onChange(v)
+                          form.setValue(
+                            'sortOrder',
+                            nextDishSortOrder(
+                              editing
+                                ? dishes.filter((d) => d.id !== editing.id)
+                                : dishes,
+                              v
+                            )
+                          )
+                        }}
                         value={field.value}
                       >
                         <FormControl>
@@ -519,6 +554,22 @@ export function DishListPage() {
                       <FormControl>
                         <Input placeholder='例如：葱油拌面' {...field} />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name='sortOrder'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>排序</FormLabel>
+                      <FormControl>
+                        <Input type='number' min={0} step={1} {...field} />
+                      </FormControl>
+                      <p className='text-muted-foreground text-xs'>
+                        仅在本分类内比较；数字越小，在菜单中越靠前。
+                      </p>
                       <FormMessage />
                     </FormItem>
                   )}
