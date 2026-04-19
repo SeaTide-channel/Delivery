@@ -4,7 +4,7 @@ import { type SidebarData } from '../types'
 export const sidebarData: SidebarData = {
   user: {
     name: '演示门店',
-    email: 'merchant@example.com',
+    phone: '13800000000',
     avatar: '',
   },
   navGroups: [

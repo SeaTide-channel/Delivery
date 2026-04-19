@@ -27,7 +27,7 @@ import { SignOutDialog } from '@/components/sign-out-dialog'
 type NavUserProps = {
   user: {
     name: string
-    email: string
+    phone: string
     avatar: string
   }
 }
@@ -54,7 +54,7 @@ export function NavUser({ user }: NavUserProps) {
                 </Avatar>
                 <div className='grid flex-1 text-start text-sm leading-tight'>
                   <span className='truncate font-semibold'>{user.name}</span>
-                  <span className='truncate text-xs'>{user.email}</span>
+                  <span className='truncate text-xs'>{user.phone}</span>
                 </div>
                 <ChevronsUpDown className='ms-auto size-4' />
               </SidebarMenuButton>
@@ -75,7 +75,7 @@ export function NavUser({ user }: NavUserProps) {
                   </Avatar>
                   <div className='grid flex-1 text-start text-sm leading-tight'>
                     <span className='truncate font-semibold'>{user.name}</span>
-                    <span className='truncate text-xs'>{user.email}</span>
+                    <span className='truncate text-xs'>{user.phone}</span>
                   </div>
                 </div>
               </DropdownMenuLabel>

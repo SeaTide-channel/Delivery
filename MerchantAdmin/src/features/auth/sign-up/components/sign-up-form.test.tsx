@@ -4,10 +4,10 @@ import { type Locator, userEvent } from 'vitest/browser'
 import { SignUpForm } from './sign-up-form'
 
 const FORM_MESSAGES = {
-  emailEmpty: 'Please enter your email.',
-  passwordEmpty: 'Please enter your password.',
-  confirmPasswordEmpty: 'Please confirm your password.',
-  passwordMismatch: "Passwords don't match.",
+  phoneEmpty: '请输入手机号。',
+  passwordEmpty: '请输入密码。',
+  confirmPasswordEmpty: '请再次输入密码。',
+  passwordMismatch: '两次输入的密码不一致。',
 } as const
 
 const toastPromise = vi.hoisted(() =>
@@ -20,7 +20,7 @@ vi.mock('sonner', () => ({ toast: { promise: toastPromise } }))
 
 describe('SignUpForm', () => {
   let screen: RenderResult
-  let emailInput: Locator
+  let phoneInput: Locator
   let passwordInput: Locator
   let confirmPasswordInput: Locator
   let submitButton: Locator
@@ -29,10 +29,10 @@ describe('SignUpForm', () => {
     vi.clearAllMocks()
 
     screen = await render(<SignUpForm />)
-    emailInput = screen.getByRole('textbox', { name: /^Email$/i })
-    passwordInput = screen.getByLabelText(/^Password$/i)
-    confirmPasswordInput = screen.getByLabelText(/^Confirm Password$/i)
-    submitButton = screen.getByRole('button', { name: /^Create Account$/i })
+    phoneInput = screen.getByRole('textbox', { name: /^手机号$/ })
+    passwordInput = screen.getByLabelText(/^密码$/)
+    confirmPasswordInput = screen.getByLabelText(/^确认密码$/)
+    submitButton = screen.getByRole('button', { name: /^注册账号$/ })
   })
 
   afterEach(() => {
@@ -40,7 +40,7 @@ describe('SignUpForm', () => {
   })
 
   it('renders fields and submit button', async () => {
-    await expect.element(emailInput).toBeInTheDocument()
+    await expect.element(phoneInput).toBeInTheDocument()
     await expect.element(passwordInput).toBeInTheDocument()
     await expect.element(confirmPasswordInput).toBeInTheDocument()
     await expect.element(submitButton).toBeInTheDocument()
@@ -50,7 +50,7 @@ describe('SignUpForm', () => {
     await userEvent.click(submitButton)
 
     await expect
-      .element(screen.getByText(FORM_MESSAGES.emailEmpty))
+      .element(screen.getByText(FORM_MESSAGES.phoneEmpty))
       .toBeInTheDocument()
     await expect
       .element(screen.getByText(FORM_MESSAGES.passwordEmpty))
@@ -61,7 +61,7 @@ describe('SignUpForm', () => {
   })
 
   it('shows a mismatch error when passwords do not match', async () => {
-    await userEvent.fill(emailInput, 'a@b.com')
+    await userEvent.fill(phoneInput, '13800138000')
     await userEvent.fill(passwordInput, '1234567')
     await userEvent.fill(confirmPasswordInput, '7654321')
 
@@ -74,7 +74,7 @@ describe('SignUpForm', () => {
   it('disables submit while submitting and re-enables after timeout', async () => {
     vi.useFakeTimers()
 
-    await userEvent.fill(emailInput, 'a@b.com')
+    await userEvent.fill(phoneInput, '13800138000')
     await userEvent.fill(passwordInput, '1234567')
     await userEvent.fill(confirmPasswordInput, '1234567')
 
