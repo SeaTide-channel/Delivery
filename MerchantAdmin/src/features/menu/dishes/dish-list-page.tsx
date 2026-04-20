@@ -110,10 +110,18 @@ type DishRow = Dish & { categoryLabel: string }
 export function DishListPage() {
   const categories = useMenuStore((s) => s.categories)
   const dishes = useMenuStore((s) => s.dishes)
+  const loading = useMenuStore((s) => s.loading)
+  const error = useMenuStore((s) => s.error)
   const addDish = useMenuStore((s) => s.addDish)
   const updateDish = useMenuStore((s) => s.updateDish)
   const deleteDish = useMenuStore((s) => s.deleteDish)
   const resetToSeed = useMenuStore((s) => s.resetToSeed)
+  const fetchMenu = useMenuStore((s) => s.fetchMenu)
+
+  // 组件加载时从后端获取数据
+  React.useEffect(() => {
+    fetchMenu()
+  }, [fetchMenu])
 
   const sortedCategories = React.useMemo(
     () => selectSortedCategories(categories),
@@ -442,52 +450,76 @@ export function DishListPage() {
           </>
         }
       >
-        <div className='rounded-md border'>
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((hg) => (
-                <TableRow key={hg.id}>
-                  {hg.headers.map((header) => (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
+        {loading ? (
+          <div className='flex items-center justify-center h-64'>
+            <Loader2Icon className='size-8 animate-spin text-muted-foreground' />
+            <span className='ml-2 text-muted-foreground'>加载中...</span>
+          </div>
+        ) : error ? (
+          <div className='flex items-center justify-center h-64'>
+            <div className='text-center'>
+              <p className='text-destructive mb-2'>加载失败</p>
+              <p className='text-muted-foreground text-sm'>{error}</p>
+              <Button
+                type='button'
+                variant='outline'
+                className='mt-4'
+                onClick={fetchMenu}
+              >
+                重试
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className='rounded-md border'>
+              <Table>
+                <TableHeader>
+                  {table.getHeaderGroups().map((hg) => (
+                    <TableRow key={hg.id}>
+                      {hg.headers.map((header) => (
+                        <TableHead key={header.id}>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                        </TableHead>
+                      ))}
+                    </TableRow>
                   ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.length ? (
+                    table.getRowModel().rows.map((row) => (
+                      <TableRow key={row.id}>
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id}>
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={columns.length}
+                        className='h-24 text-center text-muted-foreground'
+                      >
+                        暂无符合条件的菜品。
                       </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className='h-24 text-center text-muted-foreground'
-                  >
-                    暂无符合条件的菜品。
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        <DataTablePagination table={table} />
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            <DataTablePagination table={table} />
+          </>
+        )}
       </StandardListShell>
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>

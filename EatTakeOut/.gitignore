@@ -31,8 +31,3 @@ build/
 
 ### VS Code ###
 .vscode/
-
-### Application Configuration ###
-# Exclude application properties files that may contain sensitive information
-backend/src/main/resources/application.properties
-backend/src/main/resources/application-*.properties

@@ -1,9 +1,5 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
-import {
-  INITIAL_CATEGORIES,
-  INITIAL_DISHES,
-} from '@/features/menu/model/mock-seed'
 import { type Category, type Dish, type DishStatus } from '@/features/menu/model/types'
 
 /** Bump when persisted shape changes to drop old sessionStorage payload */
@@ -11,16 +7,13 @@ export const MENU_MOCK_SCHEMA_VERSION = 2
 
 const STORAGE_KEY = `seatide-menu-mock-v${MENU_MOCK_SCHEMA_VERSION}`
 
-function cloneSeed(): { categories: Category[]; dishes: Dish[] } {
-  return {
-    categories: INITIAL_CATEGORIES.map((c) => ({ ...c })),
-    dishes: INITIAL_DISHES.map((d) => ({ ...d })),
-  }
-}
-
 type MenuStoreState = {
   categories: Category[]
   dishes: Dish[]
+  loading: boolean
+  error: string | null
+  /** 从后端 API 获取菜单数据 */
+  fetchMenu: () => Promise<void>
   /** Replace all data with hardcoded seed */
   resetToSeed: () => void
   addCategory: (input: Omit<Category, 'id'> & { id?: string }) => void
@@ -35,9 +28,37 @@ type MenuStoreState = {
 export const useMenuStore = create<MenuStoreState>()(
   persist(
     (set, get) => ({
-      ...cloneSeed(),
+      categories: [],
+      dishes: [],
+      loading: false,
+      error: null,
 
-      resetToSeed: () => set(cloneSeed()),
+      fetchMenu: async () => {
+        set({ loading: true, error: null })
+        try {
+          const response = await fetch('http://localhost:8080/api/merchantadmin/merchants/1/menu')
+          if (!response.ok) {
+            throw new Error('Failed to fetch menu data')
+          }
+          const data = await response.json()
+          set({
+            categories: data.categories || [],
+            dishes: data.dishes || [],
+            loading: false
+          })
+        } catch (error) {
+          console.error('Error fetching menu:', error)
+          set({
+            error: error instanceof Error ? error.message : 'Unknown error',
+            loading: false
+          })
+        }
+      },
+
+      resetToSeed: () => set({
+        categories: [],
+        dishes: []
+      }),
 
       addCategory: (input) => {
         const row: Category = {
